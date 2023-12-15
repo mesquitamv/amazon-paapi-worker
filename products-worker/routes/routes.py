@@ -1,15 +1,15 @@
-from flask import Flask, request
-import json
+from flask import Blueprint, request
 from amazon.paapi import AmazonAPI
-from .model.product import Product
+from ..model.product import Product
+import json
 
-app = Flask(__name__)
+routes_bp = Blueprint('routes',__name__)
 
-@app.route("/ping", methods=['GET'])
+@routes_bp.route("/ping", methods=['GET'])
 def ping():
     return "pong"
 
-@app.route("/product", methods=['GET'])
+@routes_bp.route("/product", methods=['GET'])
 def get_products_list():
     
     args = request.json
@@ -54,5 +54,3 @@ def get_products_list():
     
     return json.dumps(product_list)
 
-if __name__ == "__main__":
-    app.run()
