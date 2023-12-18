@@ -1,9 +1,25 @@
 from flask import Blueprint, request
 from amazon.paapi import AmazonAPI
 from ..model.product import Product
-import json
+from dotenv import load_dotenv
+from ..database.database import Database
+from pymongo import MongoClient
+from bson import json_util
+import json, os, bson
 
 routes_bp = Blueprint('routes',__name__)
+
+load_dotenv()
+access_key = os.environ.get('AMAZON_PAAPI_ACCESS_KEY')
+secret_key = os.environ.get('AMAZON_PAAPI_SECRET_KEY')
+associate_tag = os.environ.get('ASSOCIATE_TAG')
+country = os.environ.get("COUNTRY")
+db_host = os.environ.get("DATABASE_HOST")
+db_port =  int(os.environ.get("DATABASE_PORT"))
+db_username =  os.environ.get("DATABASE_USERNAME")
+db_password =  os.environ.get("DATABASE_PASSWORD")
+
+db = Database(host = db_host, port = db_port, username = db_username, password = db_password)
 
 @routes_bp.route("/ping", methods=['GET'])
 def ping():
@@ -14,10 +30,6 @@ def get_products_list():
     
     args = request.json
     
-    access_key = args['access_key']
-    secret_key = args['secret_key']
-    associate_tag = args['associate_tag']
-    country = args['country']
     keywords = args['keywords']
     product_qty = args['product_qty']
     
@@ -39,7 +51,7 @@ def get_products_list():
             product_savings_percentage = 0
         else:
             product_savings_percentage =  (products['data'][count].offers.listings[0].price.savings.percentage)
-
+        
         product = { 
             "url": str(product_url),
             "title": str(product_title),
@@ -49,8 +61,9 @@ def get_products_list():
             "lowest_price": product_lowest_price,
             "savings_percentage": product_savings_percentage      
             }
-
+        data = json.loads(json_util.dumps(product))
+        db.insert_single(data = data)
+        
         product_list.append(product)
     
     return json.dumps(product_list)
-

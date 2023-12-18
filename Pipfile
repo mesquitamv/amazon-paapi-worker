@@ -8,6 +8,8 @@ flask = "*"
 marshmallow = "*"
 amazon-paapi5 = "*"
 datetime = "*"
+python-dotenv = "*"
+pymongo = "*"
 
 [dev-packages]
 

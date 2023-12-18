@@ -1,21 +1,22 @@
-import datetime as dt
+import datetime
 from marshmallow import Schema, fields
 
 class Product(object):
-  def __init__(access_key, secret_key, associate_tag, country, keywords, product_qty):  
-      self.access_key = access_key
-      self.secret_key = secret_key
-      self.associate_tag = associate_tag
-      self.country = country
-      self.keywords = keywords
-      self.product_qty = product_qty
-      self.created_at = dt.datetime.now()
+  
+  def __init__(self,product_url ,product_title ,product_primary_image ,product_current_price ,product_higgest_price ,product_lowest_price):        
+      self.product_url = product_url
+      self.product_title = product_title
+      self.product_primary_image = product_primary_image
+      self.product_current_price = product_current_price
+      self.product_higgest_price = product_higgest_price
+      self.product_lowest_price = product_lowest_price
+      self.created_at = datetime.now()
 
-class ProductSchema(Schema):
-    access_key = fields.Str()
-    secret_key = fields.Str()
-    associate_tag = fields.Str()
-    country = fields.Str()
-    keywords = fields.Str()
-    product_qty = fields.Number()
-    created_at = fields.Date()
+  def to_json(self):
+      return jsonable_encoder(self, exclude_none=True)
+
+  def to_bson(self):
+      data = self.dict(by_alias=True, exclude_none=True)
+      if data["_id"] is None:
+          data.pop("_id")
+      return data
