@@ -1,11 +1,10 @@
 from flask import Blueprint, request
 from amazon.paapi import AmazonAPI
-from ..model.product import Product
 from dotenv import load_dotenv
 from ..database.database import Database
-from pymongo import MongoClient
+from ..model.product import Product
 from bson import json_util
-import json, os, bson
+import json, os, datetime
 
 routes_bp = Blueprint('routes',__name__)
 
@@ -25,21 +24,23 @@ db = Database(host = db_host, port = db_port, username = db_username, password =
 def ping():
     return "pong"
 
-@routes_bp.route("/product", methods=['GET'])
+@routes_bp.route("/search", methods=['GET'])
 def get_products_list():
     
     args = request.json
     
     keywords = args['keywords']
     product_qty = args['product_qty']
-    
+        
     product_list = []
     count = 0
 
     amazon = AmazonAPI(access_key, secret_key, associate_tag, country)
     products = amazon.search_items(keywords=keywords)
-    
+        
     for count in range(product_qty):
+        
+        product_asin = (products['data'][count].asin)
         product_url = (products['data'][count].detail_page_url)
         product_title = (products['data'][count].item_info.title.display_value)
         product_primary_image = (products['data'][count].images.primary.large.url)
@@ -52,18 +53,63 @@ def get_products_list():
         else:
             product_savings_percentage =  (products['data'][count].offers.listings[0].price.savings.percentage)
         
-        product = { 
-            "url": str(product_url),
-            "title": str(product_title),
-            "primary_image": product_primary_image,
-            "current_price": product_current_price,
-            "higgest_price": product_higgest_price,
-            "lowest_price": product_lowest_price,
-            "savings_percentage": product_savings_percentage      
-            }
-        data = json.loads(json_util.dumps(product))
-        db.insert_single(data = data)
+        product = Product(product_asin, 
+                          product_url,
+                          product_title,
+                          product_primary_image,
+                          product_current_price,
+                          product_higgest_price,
+                          product_lowest_price
+                          )
         
-        product_list.append(product)
+        product_list.append(product.to_json())
+    
+    data = json.loads(json_util.dumps(product_list))
+    db.insert_many(data)
+    
+    return json.dumps(product_list)
+
+@routes_bp.route('/item', methods=['GET'])
+def get_item():
+    
+    args = request.json
+    
+    asins = args['asins']
+    
+    print(type(asins))
+    
+    product_list = []
+    
+    amazon = AmazonAPI(access_key, secret_key, associate_tag, country)
+    products = amazon.get_items(item_ids=asins)
+    
+    for asin in asins:
+       
+        product_asin = (products['data'][asin].asin)
+        product_url = (products['data'][asin].detail_page_url)
+        product_title = (products['data'][asin].item_info.title.display_value)
+        product_primary_image = (products['data'][asin].images.primary.large.url)
+        product_current_price =  (products['data'][asin].offers.listings[0].price.amount)
+        product_higgest_price = (products['data'][asin].offers.summaries[0].highest_price.amount)
+        product_lowest_price = (products['data'][asin].offers.summaries[0].lowest_price.amount)
+        
+        if str(products['data'][asin].offers.listings[0].price.savings) == 'None':
+            product_savings_percentage = 0
+        else:
+            product_savings_percentage =  (products['data'][asin].offers.listings[0].price.savings.percentage)
+            
+        product = Product(product_asin, 
+                          product_url,
+                          product_title,
+                          product_primary_image,
+                          product_current_price,
+                          product_higgest_price,
+                          product_lowest_price
+                          )
+        
+        product_list.append(product.to_json())
+    
+    data = json.loads(json_util.dumps(product_list))
+    db.insert_many(data)
     
     return json.dumps(product_list)
